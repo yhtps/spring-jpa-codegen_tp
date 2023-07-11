@@ -1,14 +1,15 @@
 import * as vscode from "vscode";
-import { CLASS_SELECTION, EXT_COMMANDS } from "./common/ext.const";
-import { NO_ENTITY_ANNOTATION, QUALIFIED_JAVA_CONTENT } from "./common/regex";
+import { EXT_PROPERTIES as EXT, EXT_SELECTION } from "./common/ext.const";
+import { getExcludeJavaContentRegex } from "./common/regex";
 import { getJavaConfigPath, onConfigChange } from "./config/configUtils";
-import { getDocSymbols, getFileContent, getFileName, getFiles, getFilteredFilePaths } from "./file/fileUtils";
-import { extractEntityPrivateFields, getDtoAnnotation, getPackageDeclaration } from "./file/javaContent";
+import { getFileContent, getFileName, getFiles, getFilteredFiles } from "./file/fileUtils";
+import { getDtoAnnotation, getPackageDeclaration } from "./file/javaContent";
+import { extractClassAnnotations, extractFields } from "./file/simpleJavaParser";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(onConfigChange));
-  context.subscriptions.push(vscode.commands.registerCommand(EXT_COMMANDS.methods, () => {}));
-  context.subscriptions.push(vscode.commands.registerCommand(EXT_COMMANDS.classes, codeGenClasses));
+  context.subscriptions.push(vscode.commands.registerCommand(EXT.commands.methods, () => {}));
+  context.subscriptions.push(vscode.commands.registerCommand(EXT.commands.classes, codeGenClasses));
 }
 
 export function deactivate() {}
@@ -24,7 +25,7 @@ async function codeGenClasses() {
   if (!entityPaths) {
     return;
   }
-  getDocSymbols(entityPaths[0]);
+  // getSymbols(entityPaths[0]);
   switch (classType) {
     case "dto":
       generateDto(entityPaths, classType);
@@ -47,13 +48,14 @@ async function codeGenClasses() {
 }
 
 async function selectClassType() {
-  const items = CLASS_SELECTION;
+  const items = Object.values(EXT_SELECTION.javaClass);
   let selectedItem = await vscode.window.showQuickPick(items, {
     canPickMany: false,
     title: "What type of class do you want to create?",
   });
   return selectedItem;
 }
+
 async function selectEntityPaths() {
   const entityPaths = await getEntityPaths();
 
@@ -70,8 +72,7 @@ async function selectEntityPaths() {
 
 async function getEntityPaths() {
   const javaFiles = await getFiles(getJavaConfigPath());
-  const qRegex = [...QUALIFIED_JAVA_CONTENT, ...[NO_ENTITY_ANNOTATION]];
-  return await getFilteredFilePaths(javaFiles, "@Entity", qRegex);
+  return await getFilteredFiles(javaFiles, "@Entity", getExcludeJavaContentRegex());
 }
 
 async function generateDto(entityPaths: vscode.Uri[], classType: string) {
@@ -80,9 +81,19 @@ async function generateDto(entityPaths: vscode.Uri[], classType: string) {
   let packagePath: string;
   let fields: string[];
   for (let entityPath of entityPaths) {
-    const entityContent = await getFileContent(entityPath, QUALIFIED_JAVA_CONTENT);
-    const entityFields = extractEntityPrivateFields(entityContent);
+    const entityContent = await getFileContent(entityPath, getExcludeJavaContentRegex(true));
+    let as = extractClassAnnotations(entityContent);
+    console.log(as);
+
+    const entityFields = extractFields(entityContent);
     const dtoPackageDecl = getPackageDeclaration(entityContent, classType);
-    // console.log(dtoPackageDecl, entityFields);
+  }
+}
+
+async function getJavaApi() {
+  const extension = vscode.extensions.getExtension("redhat.java");
+  if (extension) {
+    const extensionApi = await extension.exports;
+    console.log(extensionApi.status);
   }
 }

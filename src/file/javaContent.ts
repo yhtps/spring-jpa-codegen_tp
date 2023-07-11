@@ -1,5 +1,6 @@
-import { JAVA_FIELD, JAVA_PACKAGE } from "../common/regex";
+import { EXT_SELECTION } from "../common/ext.const";
 import { getDtoAnnotationConfig, getSubPackageName, isSubPackage } from "../config/configUtils";
+import { extractPackageDecl } from "./simpleJavaParser";
 export const javaClassTemplate: string = `
 package packagePath;
 
@@ -63,43 +64,31 @@ function dtoAnnotationMapper(dtoAn: string) {
   lClassAnnotations.push(`@${dtoAn[0].toUpperCase()}${dtoAn.slice(1)}`);
 }
 
-export function extractEntityPrivateFields(javaContent: string) {
-  const fields: { name: string; type: string }[] = [];
-  let match = JAVA_FIELD.exec(javaContent);
-  while (match) {
-    fields.push({ name: match[2], type: match[1] });
-    match = JAVA_FIELD.exec(javaContent);
-  }
-  return fields;
-}
-
-export function extractEntityPackageDeclaration(javaContent: string) {
-  const match = JAVA_PACKAGE.exec(javaContent);
-  return match ? match[1] : "";
-}
-
 export function getPackageDeclaration(javaContent: string, classType: string) {
-  let pkg = extractEntityPackageDeclaration(javaContent);
+  let pkg = extractPackageDecl(javaContent);
+  let subPkg = getSubPackageByType(classType);
   if (!isSubPackage()) {
     return pkg;
+  } else if (classType === "service") {
+    return `${pkg},subPkg`;
   } else {
-    let subPkg = extractSubPackageName(classType);
     return pkg.replace(";", `.${subPkg};`);
   }
 }
 
-function extractSubPackageName(classType: string) {
+function getSubPackageByType(classType: string) {
+  const ct = EXT_SELECTION.javaClass;
   const subPkg = getSubPackageName();
   switch (classType) {
-    case "dto":
+    case ct.dto:
       return subPkg.dto;
-    case "service":
-    // return subPkg.service, subPkg.serviceImpl;
-    case "controller":
+    case ct.service:
+      return `${subPkg.service},${subPkg.serviceImpl}`;
+    case ct.controller:
       return subPkg.controller;
-    case "jpa repository":
+    case ct.jpaRepo:
       return subPkg.repository;
-    case "querydsl repository":
+    case ct.querydslRepo:
       return subPkg.repository;
   }
 }
