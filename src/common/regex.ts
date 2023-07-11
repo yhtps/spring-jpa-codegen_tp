@@ -37,4 +37,4 @@ export const JAVA_PACKAGE = /\s*package\s+(.+);/;
 export const JAVA_IMPORTS = /\s*import\s+([a-zA-Z0-9_.]+);/g;
 
 export const JAVA_CLASS_DECLARATION = /[\s\S]*?(?=\{)/g;
-export const JAVA_CLASS_ANNOTATION = /@.*?\n/g;
+export const SINGLE_LINE_ANNOTATION = /@.*/g;

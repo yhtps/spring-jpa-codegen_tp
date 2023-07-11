@@ -1,34 +1,6 @@
 import { EXT_SELECTION } from "../common/ext.const";
 import { getDtoAnnotationConfig, getSubPackageName, isSubPackage } from "../config/configUtils";
 import { extractPackageDecl } from "./simpleJavaParser";
-export const javaClassTemplate: string = `
-package packagePath;
-
-imports
-
-annotations
-public classDeclaration extends implements {
-
-    fields
-
-    methods
-
-}
-`;
-export const javaInterfaceTemplate: string = `
-package packagePath;
-
-imports
-
-annotations
-public classDeclaration extends {
-
-    fields
-
-    methods
-
-}
-`;
 
 let classToExtend: string[]; // 인터페이스일시 여러개
 let classToImplement: string[]; // 인터페이스일시 존재하지않음

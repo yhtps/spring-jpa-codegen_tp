@@ -1,18 +1,59 @@
-import { JAVA_CLASS_ANNOTATION, JAVA_CLASS_DECLARATION, JAVA_FIELD, JAVA_IMPORTS, JAVA_PACKAGE, SPLITTER } from "../common/regex";
+import {
+  JAVA_CLASS_DECLARATION,
+  JAVA_FIELD,
+  JAVA_IMPORTS,
+  JAVA_PACKAGE,
+  SINGLE_LINE_ANNOTATION,
+  SPLITTER,
+} from "../common/regex";
+
+export interface JavaClass {
+  package: string;
+  imports: string[];
+  annotations?: string[];
+  classDeclaration: string;
+  extends?: string[];
+  implements?: string[];
+  fields?: string[];
+  methods?: string[];
+}
+
+export const javaClassTemplate: string = `
+package packagePath;
+
+imports
+
+annotations
+public classDeclaration extends implements {
+
+    fields
+
+    methods
+
+}
+`;
+
+export const javaInterfaceTemplate: string = `
+package packagePath;
+
+imports
+
+annotations
+public classDeclaration extends {
+
+    fields
+
+    methods
+
+}
+`;
 
 function getClassType(text: string): string {
-  // 클래스 선언 부를 찾는 정규 표현식
-  const classRegex = /(\w+)\s+([a-zA-Z0-9_]+)/;
-
-  // 전체 텍스트에 정규 표현식을 적용하여 클래스 선언 부를 추출함
-  const match = classRegex.exec(text);
+  const match = text.match(JAVA_PACKAGE);
   if (match) {
-    // 첫 번째 그룹은 클래스 유형을 나타냄
     const classType = match[1];
-    // 두 번째 그룹은 클래스 이름을 나타냄
     const className = match[2];
 
-    // 클래스 유형에 따라서 적절한 문자열로 반환함
     switch (classType) {
       case "class":
         return "class";
@@ -21,7 +62,6 @@ function getClassType(text: string): string {
       case "enum":
         return "enum";
       case "interface":
-        // 인터페이스일 경우, 함수형 인터페이스인지 확인함
         if (text.includes("@FunctionalInterface")) {
           return "functional interface";
         } else {
@@ -39,11 +79,20 @@ function getClassType(text: string): string {
         return "unknown type";
     }
   } else {
-    // 클래스 선언 부를 찾지 못했을 경우
     return "no class declaration found";
   }
 }
+export function extractJavaClass(javaContent: string) {
+  javaContent = javaContent;
+  let javaClass: JavaClass;
+  javaClass = {
+    package: extractPackageDecl(javaContent),
+    imports: extractImports(javaContent),
+    classDeclaration: extractClassDecl(javaContent),
+  };
 
+  return javaClass;
+}
 export function extractPackageDecl(javaContent: string) {
   const match = JAVA_PACKAGE.exec(javaContent) || [];
   return match[1];
@@ -60,17 +109,17 @@ function extractClassDecl(javaContent: string) {
   return match[0]?.trim() ?? "";
 }
 export function extractClassAnnotations(javaContent: string) {
-  let classDeclaration = extractClassDecl(javaContent);
-  console.log(classDeclaration);
-
-  const matches = classDeclaration.match(JAVA_CLASS_ANNOTATION) || [];
+  const classDeclaration = extractClassDecl(javaContent);
+  const matches = classDeclaration.match(SINGLE_LINE_ANNOTATION) || [];
   return matches ?? [];
 }
 export function extractExtends(javaContent: string) {
-  extractClassDecl(javaContent);
+  let classDeclaration = extractClassDecl(javaContent);
+  classDeclaration = classDeclaration.replace(SINGLE_LINE_ANNOTATION, "");
 }
 export function extractImplements(javaContent: string) {
-  extractClassDecl(javaContent);
+  let classDeclaration = extractClassDecl(javaContent);
+  classDeclaration = classDeclaration.replace(SINGLE_LINE_ANNOTATION, "");
 }
 export function extractFields(javaContent: string) {
   const matches = javaContent.match(JAVA_FIELD) || [];
