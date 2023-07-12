@@ -4,7 +4,7 @@ import { getExcludeJavaContentRegex } from "./common/regex";
 import { getJavaConfigPath, onConfigChange } from "./config/configUtils";
 import { getFileContent, getFileName, getFiles, getFilteredFiles } from "./file/fileUtils";
 import { getDtoAnnotation, getPackageDeclaration } from "./file/javaContent";
-import { extractClassAnnotations, extractFields } from "./file/simpleJavaParser";
+import { extractClassAnnotations, extractClassDecl, extractFields } from "./file/simpleJavaParser";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(onConfigChange));
@@ -15,6 +15,8 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {}
 
 async function codeGenClasses() {
+  const extensionApi = await getJavaLspApi();
+  console.log(extensionApi.status);
   const classType = await selectClassType();
 
   if (!classType) {
@@ -82,18 +84,17 @@ async function generateDto(entityPaths: vscode.Uri[], classType: string) {
   let fields: string[];
   for (let entityPath of entityPaths) {
     const entityContent = await getFileContent(entityPath, getExcludeJavaContentRegex(true));
+    console.log(extractClassDecl(entityContent));
+
     let as = extractClassAnnotations(entityContent);
-    console.log(as);
+    // console.log(as);
 
     const entityFields = extractFields(entityContent);
     const dtoPackageDecl = getPackageDeclaration(entityContent, classType);
   }
 }
 
-async function getJavaApi() {
+async function getJavaLspApi() {
   const extension = vscode.extensions.getExtension("redhat.java");
-  if (extension) {
-    const extensionApi = await extension.exports;
-    console.log(extensionApi.status);
-  }
+  return extension?.exports;
 }

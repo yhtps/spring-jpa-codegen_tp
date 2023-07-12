@@ -1,5 +1,6 @@
 import {
-  JAVA_CLASS_DECLARATION,
+  JAVA_CLASS_TYPE,
+  JAVA_CLAUSE,
   JAVA_FIELD,
   JAVA_IMPORTS,
   JAVA_PACKAGE,
@@ -16,6 +17,12 @@ export interface JavaClass {
   implements?: string[];
   fields?: string[];
   methods?: string[];
+}
+export interface JavaClassDecl {
+  annotations?: string[];
+  type: string;
+  extends?: string[];
+  implements?: string[];
 }
 
 export const javaClassTemplate: string = `
@@ -48,40 +55,6 @@ public classDeclaration extends {
 }
 `;
 
-function getClassType(text: string): string {
-  const match = text.match(JAVA_PACKAGE);
-  if (match) {
-    const classType = match[1];
-    const className = match[2];
-
-    switch (classType) {
-      case "class":
-        return "class";
-      case "abstract":
-        return "abstract class";
-      case "enum":
-        return "enum";
-      case "interface":
-        if (text.includes("@FunctionalInterface")) {
-          return "functional interface";
-        } else {
-          return "interface";
-        }
-      case "record":
-        return "record";
-      case "sealed":
-        return "sealed class";
-      case "primitive":
-        return "primitive class";
-      case "@interface":
-        return "annotation interface";
-      default:
-        return "unknown type";
-    }
-  } else {
-    return "no class declaration found";
-  }
-}
 export function extractJavaClass(javaContent: string) {
   javaContent = javaContent;
   let javaClass: JavaClass;
@@ -102,11 +75,20 @@ export function extractImports(javaContent: string): string[] {
   return matches.map((match) => match.replace(JAVA_IMPORTS, "$1"));
 }
 
-function extractClassDecl(javaContent: string) {
+export function extractClassDecl(javaContent: string) {
   javaContent = javaContent.replace(JAVA_PACKAGE, "");
   javaContent = javaContent.replace(JAVA_IMPORTS, "");
-  const match = JAVA_CLASS_DECLARATION.exec(javaContent) || [];
-  return match[0]?.trim() ?? "";
+  const match = JAVA_CLAUSE.classDeclaration.exec(javaContent) || [];
+  if (match[0]) {
+    let javaClass: JavaClassDecl;
+    javaClass = {
+      type: "",
+      annotations: [],
+      extends: [],
+      implements: [],
+    };
+  }
+  return match[0] ?? "";
 }
 export function extractClassAnnotations(javaContent: string) {
   const classDeclaration = extractClassDecl(javaContent);
@@ -132,3 +114,12 @@ export function extractFields(javaContent: string) {
 }
 
 export function extractMethods(javaContent: string) {}
+
+function getClassType(classDeclaration: string): string {
+  for (const [key, value] of Object.entries(JAVA_CLASS_TYPE)) {
+    if (value.test(classDeclaration)) {
+      return String(key);
+    }
+  }
+  return "class";
+}

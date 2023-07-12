@@ -60,8 +60,7 @@ export async function getFilteredFiles(files: vscode.Uri[], searchStr: string, e
 }
 
 export async function getFileContent(file: vscode.Uri, excludeContentRgx?: RegExp[]) {
-  // let fileContent = (await fs.promises.readFile(toFilePaths(file), "utf8")).toString();
-  let fileContent = (await getTextDocument(file)).getText();
+  let fileContent = (await getTextDocument(file)).getText().trim();
   excludeContentRgx?.forEach((r) => (fileContent = fileContent.replace(r, "")));
   return fileContent;
 }
@@ -73,10 +72,12 @@ export function getFileName(file: vscode.Uri, option?: boolean) {
   }
   return fPath.substring(fPath.lastIndexOf("/") + 1, fPath.lastIndexOf("."));
 }
+
 export function getDirName(file: vscode.Uri): string {
   const fPath = toFilePaths(file);
   return fPath.substring(0, fPath.lastIndexOf("/"));
 }
+
 export async function createFile(filePath: string, fileContent: string) {
   try {
     await fs.promises.access(filePath);
